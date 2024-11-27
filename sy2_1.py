@@ -1,57 +1,46 @@
 import numpy as np
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from scipy import stats
 
-# 给定数据
-x = np.array([0.5, 1.5, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5])
+# Example data
+x = np.array([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5])
 y = np.array([0, 0.69, 1.10, 1.39, 1.61, 1.79, 1.95, 2.08, 2.20, 2.30])
 
-# 计算t = e^y
-t = np.exp(y)
+# Add noise to the data
+noise = np.random.normal(0, 0.1, y.shape)
+y_noisy = y + noise
 
-# 使用线性回归拟合y = log(ax)，我们要找到a
-# 先计算log(x)
-log_x = np.log(x)
+# Apply logarithmic transformation to the features
+x_log = np.log(x)
 
-# 进行线性回归，拟合log(x)和y的关系
-slope, intercept, r_value, p_value, std_err = stats.linregress(log_x, y)
+# Add constant term to include intercept
+x_log = sm.add_constant(x_log)
 
-# 输出拟合结果
-print(f"拟合得到的斜率 (log(a))：{slope}")
-print(f"拟合得到的截距：{intercept}")
-a = np.exp(slope)  # 从log(a)得到a
-print(f"计算得到的a值：{a}")
+# Fit model with log-transformed features
+model = sm.GLM(y_noisy, x_log, family=sm.families.Gaussian(sm.families.links.identity()))
+results = model.fit()
 
-# 计算每个x对应的t
-t_values = np.exp(np.log(a) + slope * log_x)
+# Print summary
+print(results.summary())
 
-# 输出结果
-for i in range(len(x)):
-    print(f"x{i+1} = {x[i]}, t{i+1} = {t[i]:.4f}")
+# Predicted values
+y_pred = results.predict(x_log)
 
-# 输出a值
-print(f"\na = {a:.4f}")
-
-# 绘制预测图/分类图
-
-# 绘制实际数据点
-plt.scatter(x, t, color='blue', label='Actual data')
-
-# 绘制拟合曲线
-# 计算拟合曲线的y值
-x_fit = np.linspace(min(x), max(x), 100)
-y_fit = np.exp(np.log(a) + slope * np.log(x_fit))
-
-plt.plot(x_fit, y_fit, color='red', label=f'Fitting line: t = {a:.4f} * x^{slope:.4f}')
-
-# 添加标签和标题
+# Plot results
+plt.scatter(x, y_noisy, color='blue', label='data with noise')
+plt.plot(x, y_pred, color='red', label='Fit line')
 plt.xlabel('x')
-plt.ylabel('t')
-plt.title('Prediction Chart/Classification chart')
-
-# 添加图例
+plt.ylabel('y')
 plt.legend()
-
-# 显示图形
 plt.show()
+
+# Calculate t
+a = results.params[1]  # Get coefficient a
+print(f"Calculated a = {a}")
+x_values = np.arange(0.5, 5.5, 0.5)
+for x_value in x_values:
+    y_value = np.log(a * x_value)
+    t = np.exp(y_value)
+
+    print(f"When x = {x_value}, t = {t}")
 
